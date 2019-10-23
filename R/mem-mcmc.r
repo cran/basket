@@ -18,9 +18,11 @@
 #' @param hpd_alpha the highest posterior density trial significance.
 #' @param alternative the alternative case definition (default greater)
 #' @param mcmc_iter the number of MCMC iterations.
+#' @param mcmc_burnin the number of MCMC Burn_in iterations.
 #' @param initial_mem the initial MEM matrix.
 #' @param seed the random number seed.
 #' @param call the call of the function.
+#' @param cluster_function a function to cluster baskets 
 #' @importFrom stats rbinom
 #' @examples
 #' \donttest{
@@ -40,7 +42,6 @@
 #' res <- mem_mcmc(trials$responses, trials$size)
 #' }
 #' @importFrom stats median
-#' @importFrom igraph graph_from_adjacency_matrix cluster_louvain E
 #' @importFrom crayon red
 #' @importFrom itertools isplitVector
 #' @export
@@ -56,10 +57,12 @@ mem_mcmc <- function(responses,
                               ncol = length(responses)),
                      hpd_alpha = 0.05,
                      alternative = "greater",
-                     mcmc_iter = 10000,
+                     mcmc_iter = 200000,
+                     mcmc_burnin = 50000,
                      initial_mem = round(prior - 0.001),
                      seed = 1000,
-                     call = NULL) {
+                     call = NULL,
+                     cluster_function = cluster_membership) {
   set.seed(seed)
   k <- NULL
   if (is.null(getDoParName())) {
@@ -85,6 +88,103 @@ mem_mcmc <- function(responses,
     p0 <- rep(p0, length(responses))
   }
  
+  size1 <- size[size != 0]
+  alp <- hpd_alpha
+  if(length(size1) < 1) {
+    stop(red(
+      "The length of the responses must be equal or greater than 1"
+    ))
+  }
+
+  if(length(size1) == 1) {
+    ind <- which(size != 0)
+    nVec <- length(size)
+    prior_inclusion <- prior
+    tM <- matrix(1, nVec, nVec) #diag(nVec)
+    colnames(tM) <- rownames(tM) <- name
+    if(nVec > 1) {
+      tM[, ind] <- 0
+      tM[ind, ] <- 0
+      tM[ind, ind] <- 1
+    }
+    MAX <- MAP <- PEP <- tM 
+    pweights <- rep(0, nVec)
+    pweights[ind] <- 1
+    HPD <- matrix(NA, 2, nVec)
+    pESS <- post.prob <- rep(NA, nVec)
+    names(pESS) <- names(post.prob) <- name
+    rownames(HPD) <- c("lower", "upper")
+    colnames(HPD) <- name    
+    a <- shape1
+    b <- shape2
+    samp <- samp_one_group(responses[1], size[1], a[1], b[1])
+    HPD[, 1] <- boa.hpd(samp,alp)
+    pESS[1] <- a[1] + b[1] + size[1]
+    t <-
+      eval_post_one_group(p0[1], responses[1], size[1], a[1], b[1], alternative)
+    post.prob[1] <- t 
+    
+    
+    if (nVec > 1) {
+      for(i in 2:nVec){
+        sampG <- samp_one_group(responses[i], size[i], a[i], b[i])
+        samp <-cbind(samp, sampG)
+        HPD[, i] <- boa.hpd(sampG,alp)
+        pESS[i] <- a[i] + b[i] + size[i]
+        post.prob[i] <- eval_post_one_group(p0[i], responses[i], size[i], 
+                                            a[i], b[i], alternative)
+      }
+      colnames(samp)<-name
+    }
+    if (is.null(call)) {
+      call <- match.call()
+    }
+    ret <-
+      list(maximizer = MAX,
+           PRIOR = prior_inclusion,
+           MAP = MAP,
+           PEP = PEP,
+           post.prob = post.prob,
+           #ESS = pESS,
+           HPD = HPD,
+           responses = responses,
+           size = size,
+           name = name,
+           p0 = p0,
+           alpha = hpd_alpha,
+           alternative = alternative,
+           pweights = pweights,
+           shape1 = shape1,
+           shape2 = shape2,
+           call = call
+      )
+    
+    ret$samples <- samp
+    if(nVec > 1)
+    {
+      ret$mean_est <- colMeans(ret$samples)
+      ret$median_est <- apply(ret$samples, 2, median)
+    }else{
+      ret$mean_est <- mean(ret$samples)
+      ret$median_est <- median(ret$samples)
+    }
+    
+    
+    ret$ESS <- pESS
+    
+    class(ret) <- c("mem_basket", "mem")
+    clusterRet <- clusterComp(ret, cluster_function)
+    class(clusterRet) <- c("mem_cluster", "mem")
+    result <-
+      list(
+        call = call,
+        basket = ret,
+        cluster = clusterRet
+      )
+    class(result) <- c("mem_exact", "exchangeability_model")
+    return(result)
+  }
+  
   if (!isTRUE(all.equal(diag(prior), rep(1, ncol(prior))))) {
     stop(red("Elements on the main diagonal of `prior` must be 1."))
   }
@@ -133,6 +233,7 @@ mem_mcmc <- function(responses,
   MAP.list <- list(mem.Samp[[1]])
   MAP.count <- c(1)
   
+  
   mapHash <- new.env()
   mapHash[[toString(MOld)]] <- 1
   
@@ -142,6 +243,14 @@ mem_mcmc <- function(responses,
   betaV <- beta(shape1, shape2)
   prod.vec <- beta(xvec + shape1, nvec + shape2 - xvec) / beta(shape1, shape2)
 
+  
+  for (i in 1:mcmc_burnin) {
+    t <- update.MH(MOld, M, responses, size,
+                   shape1, shape2, mod_mat, prior, betaV, oldDens, prod.vec)
+    MOld <- t[[1]]
+    oldDens <- t[[2]]
+  }
+  
   t <- update.MH(MOld, M, responses, size,
                 shape1, shape2, mod_mat, prior, betaV, oldDens, prod.vec)
   mem.Samp[[2]] <- t[[1]]
@@ -210,6 +319,27 @@ mem_mcmc <- function(responses,
     pweights[[KK]] <- mweights[, KK] / mcmc_iter
   }
   
+  # pESS <- rep(NA, length(xvec))
+  # 
+  # pESS[1] <-
+  #   pweights[[1]] %*% ESS(xvec, nvec, models, shape1[1], shape2[1])
+  # 
+  # 
+  # K <- length(xvec)
+  # for (j in 2:(K - 1)) {
+  #   Ii <- c(j, 1:(j - 1), (j + 1):K)
+  #   pESS[j] <-
+  #     pweights[[j]] %*% ESS(xvec[Ii], nvec[Ii], models, shape1[j], shape2[j])
+  # 
+  # }
+  # j <- j + 1
+  # Ii <- c(j, 1:(j - 1))
+  # 
+  # 
+  # pESS[j] <- pweights[[j]] %*%
+  #   ESS(xvec[Ii], nvec[Ii], models, shape1[j], shape2[j])
+  
+
   ### List for post-processing ###
   MODEL <-
     list(
@@ -245,7 +375,7 @@ mem_mcmc <- function(responses,
       alternative = alternative,
       shape1 = shape1,
       shape2 = shape2,
-      prior = prior,
+      PRIOR = prior,
       call = call
     )
   ret$mod_mat <- mod_mat
@@ -269,7 +399,7 @@ mem_mcmc <- function(responses,
   names(ret$ESS) <- MODEL$name
   class(ret) <- c("mem_basket", "mem")
   
-  clusterRet <- clusterComp(ret)
+  clusterRet <- clusterComp(ret, cluster_function)
   class(clusterRet) <- c("mem_cluster", "mem")
   result <- list(call = call, basket = ret, cluster = clusterRet, seed = seed)
   class(result) <- c("mem_mcmc", "exchangeability_model")

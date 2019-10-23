@@ -10,18 +10,27 @@ vw <- vemu_wide
 names(vw) <- c("Basket", "Enrolled", "Evauable", "Responders", "Prior Thrpy <= 1", "Prior Thrpy = 2", "Prior Thrpy >= 3")
 knitr::kable(vw)
 
-## ------------------------------------------------------------------------
+## ---- eval = FALSE-------------------------------------------------------
+#  # Load the basket library.
+#  library(basket)
+#  
+#  # Load the vemurafenib data.
+#  data(vemu_wide)
+#  
+#  # Perform the analysis.
+#  vemu_basket <- basket(responses = vemu_wide$responders,
+#                        size = vemu_wide$evaluable,
+#                        name = vemu_wide$baskets,
+#                        p0 = 0.15)
+#  
+#  # Show the trial diagnostics.
+#  summary(vemu_basket)
+
+## ---- eval = TRUE, echo = FALSE, message = FALSE, warning = FALSE--------
 # Load the basket library.
 library(basket)
 
-# Load the vemurafenib data.
-data(vemu_wide) 
-
-# Perform the analysis.
-vemu_basket <- mem_mcmc(responses = vemu_wide$responders,
-                        size = vemu_wide$evaluable,
-                        name = vemu_wide$baskets,
-                        p0 = 0.15)
+vemu_basket <- readRDS("vemu_basket.rds")
 
 # Show the trial diagnostics.
 summary(vemu_basket)

@@ -153,13 +153,18 @@ plot_pep.default <- function(x, ...) {
 #' @importFrom ggplot2 ggplot aes geom_tile scale_fill_gradient2 theme_minimal
 #' theme element_text coord_fixed scale_x_discrete scale_y_discrete
 #' geom_text labs guides element_blank guide_colorbar
-exchangeogram <- function(mat, low = "black", high = "red", mid = "orange",
+#' @importFrom RColorBrewer brewer.pal
+exchangeogram <- function(mat, palette = brewer.pal(3, "BuGn"),
                           expand = c(0.3, 0.3), text_size = 4,
                           legend_position = c(0.25, 0.8), draw_legend = TRUE,
                           basket_name_hoffset = 0, basket_name_hjust = 1) {
   if (!is.null(mat) && any(rownames(mat) != colnames(mat))) {
     stop(red("The matrix supplied must be symmetric in the",
              "values and names."))
+  }
+
+  if (length(palette) != 3) {
+    stop(red("The color palette must have three colors."))
   }
 
   for (i in 1:dim(mat)[1]) {
@@ -191,7 +196,7 @@ exchangeogram <- function(mat, low = "black", high = "red", mid = "orange",
   tG <- ggplot(mg, aes(V2, V1, fill = value)) +
     geom_tile(color = "white") +
     scale_fill_gradient2(
-      low = low, high = high, mid = mid,
+      low = palette[1], high = palette[3], mid = palette[2],
       midpoint = 0.5, limit = c(0, 1), space = "Lab",
       name = "Probability"
     ) +
@@ -242,6 +247,7 @@ exchangeogram <- function(mat, low = "black", high = "red", mid = "orange",
   return(tG)
 }
 
+
 #' @title Plot the Prior, MAP, and PEP of a Basket Trial
 #' 
 #' @description: Plot the Prior, MAP, and PEP Matrices
@@ -272,7 +278,7 @@ plot_mem.mem <- function(x, type = c("prior", "map", "pep"), ...) {
   numC <- 0
   allPlot <- list()
   if (any(type == "prior")) {
-    mat <- round(x$prior, 3)
+    mat <- round(x$PRIOR, 3)
     if (!is.null(x$name)) {
       dimnames(mat) <- list(x$name, x$name)
     } else {
@@ -434,4 +440,9 @@ plot_map.mem <- function(x, ...) {
       color = "#666666",
       face = "bold", size = 25, hjust = 0.5
     ))
+}
+
+#' @export
+plot.exchangeability_model <- function(x, ...) {
+  plot_mem(x, ...)
 }

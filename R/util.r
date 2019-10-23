@@ -1,5 +1,4 @@
 
-
 #' @importFrom foreach getDoParWorkers
 num_workers <- function(factor = 1) {
   getDoParWorkers() * factor
@@ -16,8 +15,14 @@ boa.hpd <- function(x, alpha) {
 }
 
 MEM.mat <- function(Indices, mod.mat, H) {
+  #browser()
   M <- matrix(NA, H, H)
   diag(M) <- rep(1, dim(M)[1])
+  if(H == 2)
+  {
+    M[1, 2] <- M[2, 1] <- mod.mat[[1]][Indices[1]]
+    return(M)
+  }
   for (i in seq_len(length(Indices) - 1)) {
     M[(i + 1):dim(M)[2], i] <- M[i, (i + 1):dim(M)[2]] <- 
       mod.mat[[i]][Indices[i], ]
@@ -77,10 +82,18 @@ mem.j <- function(I, mod.mat, pr.Inclus, j, m) {
 }
 
 j.weight.1 <- function(i, Mod.I, mod.mat, pr.Inclus, j, log.Marg, PRIOR) {
+  if(length(log.Marg)== 2)
+  {
+    I.m <- apply(Mod.I,
+                 MARGIN = 1, FUN = mem.j, mod.mat, pr.Inclus, j,
+                 c(1, mod.mat[[1]][i])
+    )
+  }else{
   I.m <- apply(Mod.I,
     MARGIN = 1, FUN = mem.j, mod.mat, pr.Inclus, j,
     c(1, mod.mat[[1]][i, ])
   )
+  }
   ((exp(log.Marg) * PRIOR) %*% I.m) / sum(exp(log.Marg) * PRIOR)
 }
 
@@ -94,14 +107,36 @@ j.weight.j <- function(i, Mod.I, mod.mat, pr.Inclus, j, log.Marg, PRIOR) {
 }
 
 j.weight.J <- function(i, Mod.I, mod.mat, pr.Inclus, j, log.Marg, PRIOR) {
+  if(length(log.Marg)== 2)
+  {
+    I.m <- apply(Mod.I,
+                 MARGIN = 1, FUN = mem.j, mod.mat, pr.Inclus, j,
+                 c(mod.mat[[1]][i], 1))
+  }else{
   I.m <- apply(Mod.I,
     MARGIN = 1, FUN = mem.j, mod.mat, pr.Inclus, j,
     c(mod.mat[[1]][i, ], 1)
-  )
+  )}
   ((exp(log.Marg) * PRIOR) %*% I.m) / sum(exp(log.Marg) * PRIOR)
 }
 
 post.Weights <- function(j, J, Mod.I, mod.mat, pr.Inclus, log.Marg, PRIOR) {
+  if(length(log.Marg)== 2)
+  {
+    if (j == 1) {
+      out <- vapply(1:2,
+                    FUN = j.weight.1, FUN.VALUE = NA_real_,
+                    Mod.I, mod.mat, pr.Inclus, j, log.Marg, PRIOR
+      )
+    } else if (j == J) {
+      out <- vapply(1:2,
+                    FUN = j.weight.J, FUN.VALUE = NA_real_,
+                    Mod.I, mod.mat, pr.Inclus, j, log.Marg, PRIOR
+      )
+    }
+    return(out)
+  }
+    
   if (j == 1) {
     out <- vapply(seq_len(nrow(mod.mat[[1]])),
       FUN = j.weight.1, FUN.VALUE = NA_real_,
@@ -286,7 +321,8 @@ samp.Post <- function(X, N, Omega, w, a, b) {
   return(gen.Post(X, N, Omega[which(rmultinom(1, 1, w) == 1), ], a, b))
 }
 
-sample_posterior_model <- function(model, num_samples = 10000){   
+
+sample_posterior_model <- function(model, num_samples = 100000){   
   ret <- replicate(
     num_samples,
     samp.Post(
@@ -337,18 +373,57 @@ sample_posterior_model <- function(model, num_samples = 10000){
   ret
 }
 
-clusterComp <- function(basketRet) {
-  PEP <- basketRet$PEP
-  name <- basketRet$name
-  p0 <- unique(basketRet$p0)
-  allSamp <- basketRet$samples
+#' @importFrom stats rbeta
+samp_one_group <- function(X, N, a, b, num_samples = 100000) {
+  return(rbeta(num_samples, X + a, N - X + b))
+}
+
+#' @importFrom stats pbeta
+eval_post_one_group <- function(p0, X, N, a, b, alternative = "greater") {
+  alph <- a + X
+  beta <- b + N - X
+  if (alternative == "greater") {
+    out <- 1 - pbeta(p0, alph, beta)
+  } else {
+    out <- pbeta(p0, alph, beta)
+  }
+  return(out)
+}
+#' Cluster Baskets Base on the matrix's
+#'
+#' This is the default function used to cluster cohorts in the 
+#' \code{basket}, \code{mem_mcmc}, and \code{mem_exact} functions. 
+#' The approach creates a graph where each vertex is a cohort and the
+#' weight between two cohorts is determined by their posterior exchangeability
+#' probability. The graph is then clustered using \pkg{igraph}'s 
+#' \code{louvain} function, which determines the number of clusters and
+#' the cluster memberships, and has been shown to perform well with 
+#' real clinical data.
+#' @param m the adjacency matrix.
+#' @return A factor variable with cluster memberships for each cohort in 
+#' the study.
+#' @importFrom igraph graph_from_adjacency_matrix E cluster_louvain
+#' @seealso basket mem_mcmc mem_exact
+#' @export
+cluster_membership <- function(m) {
   graph <-
-    igraph::graph_from_adjacency_matrix(PEP,
+    graph_from_adjacency_matrix(m,
       mode = "undirected",
       weighted = TRUE,
       diag = FALSE
     )
-  result <- factor(cluster_louvain(graph, weights = E(graph)$weight)$membership)
+  factor(cluster_louvain(graph, weights = E(graph)$weight)$membership)
+}
+
+clusterComp <- function(basketRet, cluster_function) {
+  nVec <- length(basketRet$size)
+  PEP <- basketRet$PEP
+  MAP <- basketRet$MAP
+  name <- basketRet$name
+  p0 <- unique(basketRet$p0)
+  allSamp <- basketRet$samples
+  #result <- cluster_function(PEP)
+  result <- cluster_function(MAP)
   numClusters <- length(levels(result))
 
   sampleC <- list()
@@ -361,8 +436,13 @@ clusterComp <- function(basketRet) {
     clusterElement[[k]] <- cBasket
     cName <- c(cName, paste0("Cluster ", k))
 
-    sampV <- as.vector(allSamp[, rank])
-    sampleC[[k]] <- sampV
+    if(nVec == 1)
+    {
+      sampV <- as.vector(allSamp)
+    }else{
+      sampV <- as.vector(allSamp[, rank])
+    }
+    sampleC[[k]] <- sampV 
   }
   names(sampleC) <- cName
 

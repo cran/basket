@@ -7,8 +7,9 @@
 mem_mcmc(responses, size, name, p0 = 0.15, shape1 = 0.5,
   shape2 = 0.5, prior = diag(length(responses))/2 + matrix(0.5, nrow =
   length(responses), ncol = length(responses)), hpd_alpha = 0.05,
-  alternative = "greater", mcmc_iter = 10000,
-  initial_mem = round(prior - 0.001), seed = 1000, call = NULL)
+  alternative = "greater", mcmc_iter = 2e+05, mcmc_burnin = 50000,
+  initial_mem = round(prior - 0.001), seed = 1000, call = NULL,
+  cluster_function = cluster_membership)
 }
 \arguments{
 \item{responses}{the number of responses in each basket.}
@@ -36,11 +37,15 @@ elsewhere.}
 
 \item{mcmc_iter}{the number of MCMC iterations.}
 
+\item{mcmc_burnin}{the number of MCMC Burn_in iterations.}
+
 \item{initial_mem}{the initial MEM matrix.}
 
 \item{seed}{the random number seed.}
 
 \item{call}{the call of the function.}
+
+\item{cluster_function}{a function to cluster baskets}
 }
 \description{
 Fit the MEM model using Bayesian Metropolis-Hasting MCMC
