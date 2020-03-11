@@ -2,8 +2,8 @@
 #' @title Plot the Response Densities in Basket Trials
 #'
 #' @description The MEM analysis calculates the probability of exchangeability
-#' of baskets and clusters in a basket trial. This function creates density 
-#' plots of the response rates of each basket or each cluster under the MEM 
+#' of baskets and clusters in a basket trial. This function creates density
+#' plots of the response rates of each basket or each cluster under the MEM
 #' design taking into account the extent to which power can be borrowed from
 #' similar trials.
 #' @param x the exchangeability model.
@@ -17,9 +17,11 @@
 #' # Create an MEM analysis of the Vemurafenib trial data.
 #' data(vemu_wide)
 #'
-#' mem_analysis <- mem_exact(vemu_wide$responders,
-#'                           vemu_wide$evaluable,
-#'                           vemu_wide$baskets)
+#' mem_analysis <- mem_exact(
+#'   vemu_wide$responders,
+#'   vemu_wide$evaluable,
+#'   vemu_wide$baskets
+#' )
 #'
 #' plot_density(mem_analysis)
 #' }
@@ -36,7 +38,8 @@ plot_density <- function(x, ...) {
 plot_density.default <- function(x, ...) {
   stop(red(
     "Don't know how to make a density plot with an object of type",
-    paste(class(x), collapse = ", "), "."))
+    paste(class(x), collapse = ", "), "."
+  ))
 }
 
 #' @export
@@ -83,7 +86,7 @@ plot_density.mem <- function(x, ...) {
   d$basket_name <- paste0(d$Basket, " (p0=", d$p0, ")")
   ggplot(d, aes(x = Density, fill = Basket)) +
     geom_density(alpha = 0.7) +
-    facet_grid( basket_name~ ., labeller = label_wrap_gen(width = 10)) +
+    facet_grid(basket_name ~ ., labeller = label_wrap_gen(width = 10)) +
     geom_vline(aes(xintercept = p0)) +
     scale_fill_manual(values = basket_colors, guide = FALSE) +
     xlab("") +
@@ -94,26 +97,33 @@ plot_density.mem <- function(x, ...) {
 
 #' @title Plot the Posterior Exchangeability of a Basket Trial
 #'
-#' @description The posterior exchangeability of the baskets in an an 
+#' @description The posterior exchangeability of the baskets in a
 #' MEM analysis can be visualized via an exchangeogram using this function.
-#' @param x the exchangeability model.
-#' @param ... other options passed to ggplot2 to alter the visual 
+#'
+#' @param x \code{basket} element of the exchangeability model.
+#' @param ... other options passed to ggplot2 to alter the visual
 #' characteristics of the plot. See Details for more information.
-#' @details The `plot_pep` attempts to place the basket names to the
-#' left of the main diagonal in a way that makes it easy to read. However,
-#' for especially long basket names options are provided to ``fine tune''
+#'
+#' @details The \code{plot_pep} function attempts to place the basket names
+#' to the left of the main diagonal in a way that makes it easy to read.
+#' However, for especially long basket names options are provided. Here
+#' is a list of all options available to ``fine tune''
 #' the visualizations. These auxiliary options include:
 #' \itemize{
-#'  \item{[low] }{The color corresponding to a low degree of exchangeability.
-#'  (Default "black")}
-#'  \item{[high] }{The color corresponding to a high degree of exchangeability.
-#'  (Default "red")}
-#'  \item{[mid] }{The color corresponding to 50\% exchangeability.
-#'  (Default "orange")}
+#'  \item{[palette] }{A color palette consisting of 3 colors: the first
+#'  corresponds to a low degree of exchangeability, the second to 50%
+#'  exchangeability, and the third to a high degree of exchangeability.
+#'  Interpolation between these colors is performed for intermediary
+#'  degrees of exchangeability.
+#'  \item{[text_color]}{A text string setting the color of the exchangeability
+#'  values printed on the plot. (Default "white")}
+#'  \item{[tile_color]}{A text string setting the color of the edges of the
+#'  tiles. (Default "white")}
+#'  (Default \code{RColorBrewer::brewer.pal(3, "BuGn")})}
 #'  \item{[expand] }{The proportion to expand the viewport
 #'  (Default expand = c(0.3, 0.3))}
 #'  \item{[text_size] }{The text size. (Default 4)}
-#'  \item{[legend_position] }{The legend position. 
+#'  \item{[legend_position] }{The legend position.
 #'    (Default legend_position = c(0.25, 0.8)}
 #'  \item{[draw_legend] }{Should the legend be drawn? (Default TRUE)}
 #'  \item{[basket_name_hoffset] }{The horizontal offset of the basket names..
@@ -126,11 +136,13 @@ plot_density.mem <- function(x, ...) {
 #' # Create an MEM analysis of the Vemurafenib trial data.
 #' data(vemu_wide)
 #'
-#' mem_analysis <- mem_exact(vemu_wide$responders,
-#'                           vemu_wide$evaluable,
-#'                           vemu_wide$baskets)
+#' mem_analysis <- mem_exact(
+#'   vemu_wide$responders,
+#'   vemu_wide$evaluable,
+#'   vemu_wide$baskets
+#' )
 #'
-#' plot_pep(mem_analysis)
+#' plot_pep(mem_analysis$basket)
 #' }
 #' @export
 plot_pep <- function(x, ...) {
@@ -141,8 +153,9 @@ plot_pep <- function(x, ...) {
 plot_pep.default <- function(x, ...) {
   stop(red(
     "Don't know how to make a posterior exchangeability plot",
-    "with an object of type", 
-    paste(class(x), collpase = ", "), "."))
+    "with an object of type",
+    paste(class(x), collpase = ", "), "."
+  ))
 }
 
 #' @importFrom stats na.omit
@@ -157,10 +170,14 @@ plot_pep.default <- function(x, ...) {
 exchangeogram <- function(mat, palette = brewer.pal(3, "BuGn"),
                           expand = c(0.3, 0.3), text_size = 4,
                           legend_position = c(0.25, 0.8), draw_legend = TRUE,
-                          basket_name_hoffset = 0, basket_name_hjust = 1) {
+                          basket_name_hoffset = 0, basket_name_hjust = 1,
+                          text_color = "white",
+                          tile_color = "white") {
   if (!is.null(mat) && any(rownames(mat) != colnames(mat))) {
-    stop(red("The matrix supplied must be symmetric in the",
-             "values and names."))
+    stop(red(
+      "The matrix supplied must be symmetric in the",
+      "values and names."
+    ))
   }
 
   if (length(palette) != 3) {
@@ -193,8 +210,8 @@ exchangeogram <- function(mat, palette = brewer.pal(3, "BuGn"),
     x = seq_len(nrow(mat)) - 1 + basket_name_hoffset,
     y = seq_len(nrow(mat)), label = colnames(mat)
   )
-  tG <- ggplot(mg, aes(V2, V1, fill = value)) +
-    geom_tile(color = "white") +
+  tg <- ggplot(mg, aes(V2, V1, fill = value)) +
+    geom_tile(color = tile_color) +
     scale_fill_gradient2(
       low = palette[1], high = palette[3], mid = palette[2],
       midpoint = 0.5, limit = c(0, 1), space = "Lab",
@@ -213,15 +230,16 @@ exchangeogram <- function(mat, palette = brewer.pal(3, "BuGn"),
     scale_x_discrete(labels = NULL, expand = expand) +
     scale_y_discrete(labels = NULL) +
     geom_text(aes(V2, V1, label = value),
-      data = mg, color = "white",
+      data = mg, color = text_color,
       size = text_size
-    ) + geom_text(aes(x = x, y = y, label = label),
+    ) +
+    geom_text(aes(x = x, y = y, label = label),
       data = label_pos,
       inherit.aes = FALSE, size = text_size, hjust = basket_name_hjust
     ) +
     labs(x = "", y = "")
   if (draw_legend) {
-    tG <- tG +
+    tg <- tg +
       theme(
         panel.grid.major = element_blank(), panel.border = element_blank(),
         panel.background = element_blank(), axis.ticks = element_blank(),
@@ -232,24 +250,24 @@ exchangeogram <- function(mat, palette = brewer.pal(3, "BuGn"),
         title.position = "top", title.hjust = 0.5
       ))
   } else {
-    tG <- tG +
+    tg <- tg +
       theme(
         panel.grid.major = element_blank(), panel.border = element_blank(),
         panel.background = element_blank(), axis.ticks = element_blank(),
-        legend.position = legend_position + c(-110, -100), 
-        legend.direction = "horizontal") +
+        legend.position = legend_position + c(-110, -100),
+        legend.direction = "horizontal"
+      ) +
       guides(fill = guide_colorbar(
         barwidth = 7, barheight = 1,
         title.position = "top", title.hjust = 0.5
       ))
   }
-
-  return(tG)
+  tg
 }
 
 
 #' @title Plot the Prior, MAP, and PEP of a Basket Trial
-#' 
+#'
 #' @description: Plot the Prior, MAP, and PEP Matrices
 #' @param x the exchangeability model.
 #' @param type the plot type that will be plotted.
@@ -262,23 +280,23 @@ plot_mem <- function(x, type = c("prior", "map", "pep"), ...) {
 #' @export
 plot_mem.default <- function(x, type = c("prior", "map", "pep"), ...) {
   stop(red(
-    "Don't know how to make an MEM plot with an object of type", 
-    paste(class(x), collpase = ", ", ".")))
+    "Don't know how to make an MEM plot with an object of type",
+    paste(class(x), collpase = ", ", ".")
+  ))
 }
 
 #' @export
-plot_mem.exchangeability_model <- 
+plot_mem.exchangeability_model <-
   function(x, type = c("prior", "map", "pep"), ...) {
-  plot_mem(x$basket, type, ...)
-}
+    plot_mem(x$basket, type, ...)
+  }
 
 #' @export
 plot_mem.mem <- function(x, type = c("prior", "map", "pep"), ...) {
-  # library("gridExtra")
-  numC <- 0
-  allPlot <- list()
+  num_col <- 0
+  all_plot <- list()
   if (any(type == "prior")) {
-    mat <- round(x$PRIOR, 3)
+    mat <- round(x$prior, 3)
     if (!is.null(x$name)) {
       dimnames(mat) <- list(x$name, x$name)
     } else {
@@ -296,13 +314,13 @@ plot_mem.mem <- function(x, type = c("prior", "map", "pep"), ...) {
           hjust = 0.35
         )
       ))
-    allPlot <- c(allPlot, list(plot1))
-    numC <- numC + 1
+    all_plot <- c(all_plot, list(plot1))
+    num_col <- num_col + 1
   }
 
 
   if (any(type == "map")) {
-    mat <- round(x$MAP, 3)
+    mat <- round(x$map, 3)
     if (!is.null(x$name)) {
       dimnames(mat) <- list(x$name, x$name)
     } else {
@@ -320,12 +338,12 @@ plot_mem.mem <- function(x, type = c("prior", "map", "pep"), ...) {
           hjust = 0.35
         )
       ))
-    allPlot <- c(allPlot, list(plot2))
-    numC <- numC + 1
+    all_plot <- c(all_plot, list(plot2))
+    num_col <- num_col + 1
   }
 
   if (any(type == "pep")) {
-    mat <- round(x$PEP, 3)
+    mat <- round(x$pep, 3)
     if (!is.null(x$name)) {
       dimnames(mat) <- list(x$name, x$name)
     } else {
@@ -342,18 +360,17 @@ plot_mem.mem <- function(x, type = c("prior", "map", "pep"), ...) {
           hjust = 0.35
         )
       )
-    allPlot <- c(allPlot, list(plot3))
-    numC <- numC + 1
+    all_plot <- c(all_plot, list(plot3))
+    num_col <- num_col + 1
   }
 
-  PLOTS <- allPlot
-  # grid.arrange(plot2, ncol = 3, nrow = 1)
-  do.call(grid.arrange, c(PLOTS, ncol = numC))
+  plots <- all_plot
+  do.call(grid.arrange, c(plots, ncol = num_col))
 }
 
 #' @export
 plot_pep.mem <- function(x, ...) {
-  mat <- round(x$PEP, 3)
+  mat <- round(x$pep, 3)
   if (!is.null(x$name)) {
     dimnames(mat) <- list(x$name, x$name)
   } else {
@@ -373,23 +390,28 @@ plot_pep.mem <- function(x, ...) {
 #' @description The Maximum A Posteriori Probability (MAP) of an MEM is the
 #' estimate of the exchangeability structure of a basket trial. This function
 #' visualizes this matrix as an exchangeogram.
-#' @param x the exchangeability model.
-#' @param ... other options passed to ggplot2 to alter the visual 
-#' @details The `plot_pep` attempts to place the basket names to the
-#' left of the main diagonal in a way that makes it easy to read. However,
-#' for especially long basket names options are provided to ``fine tune''
+#'
+#' @param x \code{basket} element of the exchangeability model.
+#' @param ... other options passed to ggplot2 to alter the visual
+#' @details The \code{plot_map} function attempts to place the
+#' basket names to the left of the main diagonal in a way that makes it
+#' easy to read. However, for especially long basket names options are
+#' provided. Here is a list of all options available to ``fine tune''
 #' the visualizations. These auxiliary options include:
 #' \itemize{
-#'  \item{[low] }{The color corresponding to a low degree of exchangeability.
-#'  (Default "black")}
-#'  \item{[high] }{The color corresponding to a high degree of exchangeability.
-#'  (Default "red")}
-#'  \item{[mid] }{The color corresponding to 50\% exchangeability.
-#'  (Default "orange")}
+#'  \item{[palette]}{A color palette consisting of 3 colors: the first
+#'  corresponds to a low degree of exchangeability, the second to 50%
+#'  exchangeability, and the third to a high degree of exchangeability.
+#'  Interpolation between these colors is performed for intermediary
+#'  degrees of exchangeability. }
+#'  \item{[text_color]}{A text string setting the color of the exchangeability
+#'  values printed on the plot. (Default "white")}
+#'  \item{[tile_color]}{A text string setting the color of the edges of the
+#'  tiles. (Default "white")}
 #'  \item{[expand] }{The proportion to expand the viewport
 #'  (Default expand = c(0.3, 0.3))}
 #'  \item{[text_size] }{The text size. (Default 4)}
-#'  \item{[legend_position] }{The legend position. 
+#'  \item{[legend_position] }{The legend position.
 #'    (Default legend_position = c(0.25, 0.8)}
 #'  \item{[draw_legend] }{Should the legend be drawn? (Default TRUE)}
 #'  \item{[basket_name_hoffset] }{The horizontal offset of the basket names..
@@ -402,11 +424,13 @@ plot_pep.mem <- function(x, ...) {
 #' # Create an MEM analysis of the Vemurafenib trial data.
 #' data(vemu_wide)
 #'
-#' mem_analysis <- mem_exact(vemu_wide$responders,
-#'                           vemu_wide$evaluable,
-#'                           vemu_wide$baskets)
+#' mem_analysis <- mem_exact(
+#'   vemu_wide$responders,
+#'   vemu_wide$evaluable,
+#'   vemu_wide$baskets
+#' )
 #'
-#' plot_map(mem_analysis)
+#' plot_map(mem_analysis$basket)
 #' }
 #' @export
 plot_map <- function(x, ...) {
@@ -418,14 +442,15 @@ plot_map <- function(x, ...) {
 plot_map.default <- function(x, ...) {
   stop(red(
     "Don't know how to make a posterior exchangeability plot",
-    "with an object of type", 
-    paste(class(x), collpase = ", ", ".")))
+    "with an object of type",
+    paste(class(x), collpase = ", ", ".")
+  ))
 }
 
 #' @importFrom ggplot2 ggtitle element_text theme
 #' @export
 plot_map.mem <- function(x, ...) {
-  mat <- round(x$MAP, 3)
+  mat <- round(x$map, 3)
   mat[lower.tri(mat)] <- NA
   if (!is.null(x$name)) {
     dimnames(mat) <- list(x$name, x$name)
@@ -435,14 +460,92 @@ plot_map.mem <- function(x, ...) {
   }
   exchangeogram(mat, ...) +
     ggtitle("Maximum A Posteriori MEM") +
-    theme(plot.title = element_text(
-      # family = "Trebuchet MS",
-      color = "#666666",
-      face = "bold", size = 25, hjust = 0.5
-    ))
+    theme(
+      plot.title = element_text(
+        # family = "Trebuchet MS",
+        color = "#666666",
+        face = "bold", size = 20, hjust = 0.5
+      ),
+      legend.position = "none"
+    )
 }
 
 #' @export
 plot.exchangeability_model <- function(x, ...) {
   plot_mem(x, ...)
+}
+
+
+#' @title Plot a Network Graph of the PEP Matrix
+#' @param x the exchangeability model.
+#' @param color_by which variable to color by. One of "post_prob",
+#'   "mean_est", "median_est".
+#' @param layout the layout algorithm to use for the graph. One of
+#'
+#' @param pep_cutoff a value between 0 and 1 indicating the cutoff for
+#'   PEP above which edges of the graph will be drawn.
+#' @examples
+#' \donttest{
+#' # Create an MEM analysis of the Vemurafenib trial data.
+#' data(vemu_wide)
+#'
+#' mem_analysis <- mem_exact(
+#'   vemu_wide$responders,
+#'   vemu_wide$evaluable,
+#'   vemu_wide$baskets
+#' )
+#'
+#' plot_pep_graph(mem_analysis)
+#' }
+#' @importFrom tibble tibble
+#' @importFrom tidygraph as_tbl_graph activate left_join filter
+#' @importFrom ggraph ggraph geom_edge_link geom_node_point geom_node_label
+#' scale_edge_width_continuous
+#' @importFrom ggplot2 scale_color_viridis_c
+#' @importFrom rlang .data
+#' @export
+plot_pep_graph <- function(x,
+                           color_by = c("post_prob", "mean_est", "median_est"),
+                           layout = c("fr", "nicely", "kk", "drl"),
+                           pep_cutoff = 0) {
+  pep <- x$basket$pep
+  color_by <- match.arg(color_by)
+  layout <- match.arg(layout)
+
+  node_attrs <- tibble::tibble(
+    name = x$basket$name,
+    post_prob = x$basket$post_prob,
+    responses = x$basket$responses,
+    size = x$basket$size,
+    p0 = x$basket$p0,
+    mean_est = x$basket$mean_est,
+    median_est = x$basket$median_est
+  )
+
+  graph <- tidygraph::as_tbl_graph(pep, directed = FALSE) %>%
+    tidygraph::activate("nodes") %>%
+    tidygraph::left_join(node_attrs, by = "name")
+
+  legend_name <- c(
+    mean_est = "Mean\nResponse\nRate",
+    median_est = "Median\nResponse\nRate",
+    post_prob = "Posterior\nProbability"
+  )
+
+  graph <- graph %>%
+    activate("edges") %>%
+    filter(.data$weight >= !!pep_cutoff)
+
+  ggraph(graph, layout = layout, weights = .data$weight) +
+    geom_edge_link(color = "gray", alpha = 0.6, aes(width = .data$weight)) +
+    geom_node_point(aes(color = .data[[color_by]]), size = 7) +
+    geom_node_label(aes(label = .data$name),
+      nudge_y = 0.15,
+      label.size = NA, hjust = "inward", alpha = 0.6
+    ) +
+    scale_color_viridis_c(
+      option = "plasma",
+      name = legend_name[color_by]
+    ) +
+    scale_edge_width_continuous(name = "PEP")
 }

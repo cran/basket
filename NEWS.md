@@ -17,6 +17,11 @@
 * A plot function was added.
 * Exchangeogram color palette can now be specified by users.
 
-# basket 0.9.10 
+# basket 0.10.0
 
-* Smaller vignette size.
+* Code was restructured to be more readable.
+* Multiple bug fixes.
+
+# basket 0.10.1
+
+* Testing changed to take less time on CRAN.
