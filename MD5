@@ -1,13 +1,13 @@
-6e9afa208cf250d6c6b9fa37a4144f40 *DESCRIPTION
-8ab5b8d61e637758a1d1a670b3d94ed6 *NAMESPACE
-4cc52af88a6c342fddc865bc076c66eb *NEWS.md
+2cc1d731646509ed8260b74227e8edfa *DESCRIPTION
+127e0e8184dcd8b917100f492768be6c *NAMESPACE
+db12c8c53511a84ce31fc114357df8b6 *NEWS.md
 bd1fabe4b1cb84fd92f3612236ace2e3 *R/accessors.r
 a2154e941a44bcb58ccb121b641f9426 *R/basket.r
 8ef2255acd88a4a5918acb4b08b4ac97 *R/data-doc.r
-979bdf6ef7ba9cc8a31babe9ad3e64d2 *R/mem-exact.r
+55a369b8f69d78a16c4cf2f4ad255541 *R/mem-exact.r
 beab9666914e59211fc07220230c408e *R/mem-mcmc.r
-7b7335fda72438837c7808b15f67b34c *R/package-doc.r
-c5515f53cc1028d99837769331e5164f *R/plot.r
+54835942157170127a4a52b76e8d15c9 *R/package-doc.r
+db3bd1710bbcc9a80f842677ff217604 *R/plot.r
 3d0d0543c545c6af4c910541146575cd *R/summary.r
 4dd947a7cd72367be462a0321cb77a02 *R/update.r
 6074f1d8d9df84453328b97d7d43330a *R/util.r
@@ -18,7 +18,7 @@ ad960533326d86f433fd772eb2451785 *build/vignette.rds
 1529111b660cda79a117904c62142a90 *inst/doc/using-the-basket-package.R
 b96de9850b7777b00ccb7d314e1542d4 *inst/doc/using-the-basket-package.Rmd
 d98a30d31efd475d897d957d61d971b0 *inst/doc/using-the-basket-package.html
-a8a32080b9e5ea4bc56474cada232991 *man/basket-package.Rd
+62f3f6ed686e80d09fd4446eec4d0b37 *man/basket-package.Rd
 27f23f7b88a40a4fc0c82e5470a647f2 *man/basket.Rd
 e843c409a685c1ee0882536c5a2076bf *man/basket_map.Rd
 5d63bc92c9011e41fde5ecd111e2994f *man/basket_name.Rd
@@ -32,7 +32,7 @@ b78a73325ce29ac7ba581e00c5e99dec *man/mem_exact.Rd
 320d13a99ee8b2046930e47937c1cd44 *man/mem_mcmc.Rd
 714c80f4c3ff4d70b56fabc2d8c57346 *man/plot_density.Rd
 e0704331eaee17e8c0b0246720eb02d6 *man/plot_map.Rd
-295627bd454ac98e010633683806dad3 *man/plot_mem.Rd
+71cbfb3e2876691086a34bc763059326 *man/plot_mem.Rd
 29c2c5cfcb3e334e210ae617bae65d08 *man/plot_pep.Rd
 cfce8a4c65640b7d46846889a8a7bc07 *man/plot_pep_graph.Rd
 682883667078de89907358714ec1816f *man/sample_posterior.Rd
