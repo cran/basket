@@ -36,7 +36,8 @@ get_seed <- function() {
 #' @param alternative the alternative case definition (default "greater").
 #' @param call the call of the function. (default NULL)
 #' @param cluster_function a function to cluster baskets.
-#' @param method "mcmc" or "exact". See details for an explanation.
+#' @param method "mcmc", "lmem" (local MEM),  or "exact". See details for an 
+#' explanation.
 #' (default "mcmc")
 #' @param mcmc_iter if the method is "mcmc" then this spcifies the number of
 #' mcmc iterations. Otherwise, it is ignored. (default 200000)
@@ -48,15 +49,19 @@ get_seed <- function() {
 #' @param seed the random seed for the mcmc calculations. By default this is
 #' .Random.seed. If this value is not initialized, then it is first initialized
 #' with Sys.time() and then returned.
-#' @details The model may be fit using either an exact calculation or via
-#' mcmc. The former conducts posterior inference through the entire set of
+#' @details The model may be fit using an exact calculation via
+#' mcmc, or a local version of MEM. The first conducts posterior inference 
+#' through the entire set of
 #' exchangeability relationships in the sample domain. This approach is
 #' computationally feasible only when the number of cohorts is relatively
 #' small. As a rule of thumb this option should be used with a maximum of
-#' 20 cohorts.  By default, the latter (mcmc) is used and it is based on
+#' 20 cohorts.  By default, the second(mcmc) is used and it is based on
 #' the Metropolis algorithm and it extends the model's implementation to
 #' larger collections of subpopulations. The algorithm initiates with a
 #' burn-in period (see mcmc_burnin), which are discarded from the analysis.
+#' The third is based on a recent paper by Wei et al. The calculation
+#' is computationally efficient and tends to borrow to a lesser extent
+#' than other implemented methods.
 #' @examples
 #' \donttest{
 #' # 3 baskets, each with enrollement size 5
@@ -92,33 +97,33 @@ basket <- function(responses,
                    alternative = "greater",
                    call = NULL,
                    cluster_function = cluster_membership,
-                   method = "mcmc",
+                   method = c("mcmc", "lmem", "exact"),
                    mcmc_iter = 200000,
                    mcmc_burnin = 50000,
                    initial_mem = round(prior - 0.001),
                    cluster_analysis = FALSE,
                    seed = get_seed()) {
-  if (isTRUE(method %in% c("exact", "mcmc"))) {
-    if (method == "exact") {
-      mem_exact(responses, size, name,
-        p0 = p0, shape1 = shape1,
-        shape2 = shape2, prior = prior,
-        hpd_alpha = hpd_alpha, alternative = alternative, seed = seed,
-        cluster_analysis = cluster_analysis,
-        call = call, cluster_function = cluster_function
-      )
-    } else {
-      mem_mcmc(responses, size, name,
-        p0 = p0, shape1 = shape1, shape2 = shape2,
-        prior = prior, hpd_alpha = hpd_alpha,
-        alternative = alternative, mcmc_iter = mcmc_iter,
-        mcmc_burnin = mcmc_burnin, initial_mem = initial_mem,
-        seed = seed,
-        cluster_analysis = cluster_analysis,
-        call = call,
-        cluster_function = cluster_function
-      )
-    }
+  if (method[1] == "exact") {
+    mem_exact(responses, size, name,
+      p0 = p0, shape1 = shape1,
+      shape2 = shape2, prior = prior,
+      hpd_alpha = hpd_alpha, alternative = alternative, seed = seed,
+      cluster_analysis = cluster_analysis,
+      call = call, cluster_function = cluster_function
+    )
+  } else if(method[1] == "mcmc") {
+    mem_mcmc(responses, size, name,
+      p0 = p0, shape1 = shape1, shape2 = shape2,
+      prior = prior, hpd_alpha = hpd_alpha,
+      alternative = alternative, mcmc_iter = mcmc_iter,
+      mcmc_burnin = mcmc_burnin, initial_mem = initial_mem,
+      seed = seed,
+      cluster_analysis = cluster_analysis,
+      call = call,
+      cluster_function = cluster_function
+    )
+  } else if (method[1] == "lmem") {
+    # Wei's code here.
   } else {
     stop(red("Unsupported method."))
   }

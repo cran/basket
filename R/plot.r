@@ -48,7 +48,14 @@ plot_density.exchangeability_model <- function(x, ...) {
   if ("type" %in% names(dots)) {
     ps <- dots$type
   } else {
-    ps <- c("basket", "cluster")
+    ps <- "basket"
+    if (all(!is.na(x$cluster))) {
+      ps <- c(ps, "cluster")
+    }
+  }
+  if ("cluster" %in% ps && any(is.na(x$cluster))) {
+    warning("A cluster analysis was not performed. Removing it from plot.")
+    ps <- ps[-which(x$cluster == ps)]
   }
   plots <- lapply(ps, function(pt) plot_density(x[[pt]]))
   if (length(plots[[1]])) {
@@ -66,7 +73,7 @@ plot_density.mem <- function(x, ...) {
   dots <- list(...)
   Basket <- Density <- p0 <- NULL
   if (length(x$p0) == 1 && length(x$size) > 1) {
-    x$p0 <- rep(x$p0, length(x$size))
+    x$p0 <- rep(x$p0, length(x$name))
   }
   d <- gather(as_tibble(x$samples), key = Basket, value = Density)
   xp <- tibble(Basket = x$name, p0 = x$p0)
